@@ -1,0 +1,47 @@
+Agent:
+  Enabled: false
+
+Master:
+  InstallPlugins:
+  - ssh-slaves:1.20
+  InitScripts:
+  - |- # Add ssh private key as credential
+    import jenkins.model.Jenkins
+    import com.cloudbees.plugins.credentials.Credentials
+    import com.cloudbees.plugins.credentials.CredentialsProvider
+    import com.cloudbees.plugins.credentials.domains.Domain
+    import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey
+    import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey.FileOnMasterPrivateKeySource
+
+    credentialStore = Jenkins.instance.getExtensionList('com.cloudbees.plugins.credentials.SystemCredentialsProvider')[0].getStore()
+    existingCredentials = CredentialsProvider.lookupCredentials(Credentials.class, Jenkins.instance)
+
+    def createOrUpdateCredential(newCredential) {
+      def existingCredential = existingCredentials.find{c -> c.getId() == newCredential.getId()}
+      if (existingCredential)
+        credentialStore.updateCredentials(Domain.global(), existingCredential, newCredential)
+      else
+        credentialStore.addCredentials(Domain.global(), newCredential)
+    }
+    def sshKey = new BasicSSHUserPrivateKey(null, 'jenkins-agent-ssh-key', 'jenkins', new FileOnMasterPrivateKeySource('/tmp/jenkins-agent-ssh-key/jenkins_ssh'), null, 'SSH key for Jenkins master to connect to its agents')
+    createOrUpdateCredential(sshKey)
+
+  - |- # Add ssh public key to admin user
+    import com.cloudbees.plugins.credentials.UserCredentialsProvider.UserCredentialsProperty
+    def adminUser = hudson.model.User.get('admin')
+    def sshPublicKey = new File('/tmp/jenkins-agent-ssh-key/jenkins_ssh.pub').text
+    def sshProperty = new org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl(sshPublicKey)
+    adminUser.addProperty(sshProperty)
+
+  - |- # Enable sshd port
+    import org.jenkinsci.main.modules.sshd.SSHD
+    SSHD.get().setPort(22)
+
+Persistence:
+  volumes:
+    - name: jenkins-agent-ssh-key
+      secret:
+        secretName: jenkins-ssh-key
+  mounts:
+    - name: jenkins-agent-ssh-key
+      mountPath: /tmp/jenkins-agent-ssh-key

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-master
+  labels:
+    component: jenkins-demo2-jenkins-master
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  - name: sshd
+    port: 22
+    targetPort: 22
+    protocol: TCP
+  selector:
+    component: jenkins-demo2-jenkins-master
+

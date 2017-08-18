@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-agent
+  labels:
+    app: jenkins-agent
+spec:
+  ports:
+  - port: 22
+    name: sshd
+  clusterIP: None
+  selector:
+    app: jenkins-agent
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: jenkins-agent
+spec:
+  serviceName: jenkins-agent
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: jenkins-agent
+      annotations:
+        pod.alpha.kubernetes.io/init-containers: '[
+            {
+              "name": "jenkins-agent-bootstrap",
+              "image": "openjdk:8-jre-alpine",
+              "imagePullPolicy": "IfNotPresent",
+              "env": [
+                {
+                  "name":"JENKINS_URL",
+                  "value": "http://jenkins-demo2-jenkins:8080"
+                },
+                {
+                  "name":"JENKINS_LABEL",
+                  "value": "stateful"
+                }
+              ],
+              "volumeMounts": [
+                {
+                  "name": "jenkins-ssh-key",
+                  "mountPath": "/tmp/ssh/"
+                },
+                {
+                  "name": "jenkins-agent-bootstrap",
+                  "mountPath": "/tmp/bootstrap/"
+                }
+              ],
+              "command": ["sh", "/tmp/bootstrap/jenkins-agent-bootstrap.sh"]
+            }
+          ]'
+    spec:
+      containers:
+      - name: jenkins-agent
+        image: jenkinsci/ssh-slave
+        ports:
+        - containerPort: 22
+        env:
+        - name: JENKINS_SLAVE_SSH_PUBKEY
+          valueFrom:
+            secretKeyRef:
+              name: jenkins-ssh-key
+              key: jenkins_ssh.pub
+        volumeMounts:
+        - name: jenkins-agent-pv
+          mountPath: /mnt/pv
+      volumes:
+      - name: jenkins-ssh-key
+        secret:
+          secretName: jenkins-ssh-key
+      - name: jenkins-agent-bootstrap
+        configMap:
+          name: jenkins-agent-bootstrap
+  volumeClaimTemplates:
+  - metadata:
+      name: jenkins-agent-pv
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 2Gi

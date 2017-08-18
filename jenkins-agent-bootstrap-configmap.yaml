@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-agent-bootstrap
+data:
+  jenkins-agent-bootstrap.sh: |
+    #!/bin/sh
+
+    MASTER_CLI_PATH='jnlpJars/jenkins-cli.jar'
+    AGENT_CLI_PATH='/root/jenkins-cli.jar'
+    SSH_KEY_PATH='/tmp/ssh/jenkins_ssh'
+    SSH_USER='admin'
+    CLI_CMD="java -jar $AGENT_CLI_PATH -ssh -user $SSH_USER -i $SSH_KEY_PATH"
+
+    AGENT_CONF="
+    <?xml version='1.0' encoding='UTF-8'?>
+    <slave>
+      <name>$(hostname -s)</name>
+      <description></description>
+      <remoteFS>/home/jenkins</remoteFS>
+      <numExecutors>1</numExecutors>
+      <mode>NORMAL</mode>
+      <retentionStrategy class='hudson.slaves.RetentionStrategy$Always'/>
+      <launcher class='hudson.plugins.sshslaves.SSHLauncher' plugin='ssh-slaves@1.20'>
+        <host>$(hostname -f)</host>
+        <port>22</port>
+        <credentialsId>jenkins-agent-ssh-key</credentialsId>
+        <maxNumRetries>8</maxNumRetries>
+        <retryWaitTime>15</retryWaitTime>
+        <sshHostKeyVerificationStrategy class='hudson.plugins.sshslaves.verifiers.NonVerifyingKeyVerificationStrategy'/>
+      </launcher>
+      <label>$JENKINS_LABEL</label>
+      <nodeProperties/>
+    </slave>"
+
+    if [[ -z $JENKINS_URL ]]; then
+      echo "ERROR: Environment variable JENKINS_URL must be defined."
+      exit 1
+    fi
+
+    if [[ -z $JENKINS_LABEL ]]; then
+      echo "WARN: Environment variable JENKINS_LABEL is not set. No label will be specified."
+    fi
+
+    echo "INFO: Installing jenkins-cli.jar from master."
+    wget $JENKINS_URL/$MASTER_CLI_PATH -O $AGENT_CLI_PATH
+
+    echo "INFO: Checking Jenkins master to see if agent $(hostname -s) is already configured"
+    $CLI_CMD get-node $(hostname -s) >& /dev/null
+    if [[ $? != 0 ]]; then
+      echo "INFO: Could not find agent in Jenkins master. Creating new node configuration with host $(hostname -s).$(hostname -d)"
+      echo $AGENT_CONF | $CLI_CMD create-node $(hostname -s)
+      if [[ $? != 0 ]]; then
+        echo "ERROR: Could not configure Jenkins master to use this agent"
+        exit 1
+      fi
+    fi
