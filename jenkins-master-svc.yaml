@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: jenkins-master
   labels:
-    component: jenkins-demo2-jenkins-master
+    component: jenkins-demo-jenkins-master
 spec:
   ports:
   - name: http
@@ -15,5 +15,5 @@ spec:
     targetPort: 22
     protocol: TCP
   selector:
-    component: jenkins-demo2-jenkins-master
+    component: jenkins-demo-jenkins-master
 
