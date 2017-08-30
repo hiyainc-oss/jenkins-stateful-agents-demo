@@ -47,6 +47,10 @@ spec:
                 {
                   "name": "jenkins-agent-bootstrap",
                   "mountPath": "/tmp/bootstrap/"
+                },
+                {
+                  "name": "jenkins-agent-pv",
+                  "mountPath": "/mnt/pv"
                 }
               ],
               "command": ["sh", "/tmp/bootstrap/jenkins-agent-bootstrap.sh"]
