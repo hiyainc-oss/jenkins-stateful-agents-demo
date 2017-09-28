@@ -24,6 +24,8 @@ spec:
       labels:
         app: jenkins-agent
     spec:
+      securityContext:
+        fsGroup: 1000
 
       initContainers:
       - name: jenkins-agent-init
@@ -55,6 +57,7 @@ spec:
         volumeMounts:
         - name: jenkins-agent-pv
           mountPath: /mnt/pv
+
       volumes:
       - name: jenkins-ssh-key
         secret:
