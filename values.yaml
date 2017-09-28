@@ -38,6 +38,7 @@ Master:
     SSHD.get().setPort(22)
 
 Persistence:
+  Enabled: false
   volumes:
     - name: jenkins-agent-ssh-key
       secret:
