@@ -46,7 +46,7 @@ data:
     wget $JENKINS_URL/$MASTER_CLI_PATH -O $AGENT_CLI_PATH
 
     echo "INFO: Checking Jenkins master to see if agent $(hostname -s) is already configured"
-    $CLI_CMD get-node $(hostname -s) >& /dev/null
+    $CLI_CMD get-node $(hostname -s)
     if [[ $? != 0 ]]; then
       echo "INFO: Could not find agent in Jenkins master. Creating new node configuration with host $(hostname -s).$(hostname -d)"
       echo $AGENT_CONF | $CLI_CMD create-node $(hostname -s)
@@ -55,6 +55,3 @@ data:
         exit 1
       fi
     fi
-
-    adduser jenkins
-    chown jenkins /mnt/pv
