@@ -23,36 +23,22 @@ spec:
     metadata:
       labels:
         app: jenkins-agent
-      annotations:
-        pod.alpha.kubernetes.io/init-containers: '[
-            {
-              "name": "jenkins-agent-bootstrap",
-              "image": "openjdk:8-jre-alpine",
-              "imagePullPolicy": "IfNotPresent",
-              "env": [
-                {
-                  "name":"JENKINS_URL",
-                  "value": "http://jenkins-demo2-jenkins:8080"
-                },
-                {
-                  "name":"JENKINS_LABEL",
-                  "value": "stateful"
-                }
-              ],
-              "volumeMounts": [
-                {
-                  "name": "jenkins-ssh-key",
-                  "mountPath": "/tmp/ssh/"
-                },
-                {
-                  "name": "jenkins-agent-bootstrap",
-                  "mountPath": "/tmp/bootstrap/"
-                }
-              ],
-              "command": ["sh", "/tmp/bootstrap/jenkins-agent-bootstrap.sh"]
-            }
-          ]'
     spec:
+
+      initContainers:
+      - name: jenkins-agent-init
+        image: openjdk:8-jre-alpine
+        imagePullPolicy: IfNotPresent
+        command: ['sh', '/tmp/bootstrap/jenkins-agent-bootstrap.sh']
+        env:
+        - name: JENKINS_URL
+          value: http://jenkins-demo-jenkins:8080
+        - name: JENKINS_LABEL
+          value: stateful
+        volumeMounts:
+        - name: jenkins-ssh-key
+          mountPath: /tmp/ssh/
+
       containers:
       - name: jenkins-agent
         image: jenkinsci/ssh-slave
@@ -74,6 +60,7 @@ spec:
       - name: jenkins-agent-bootstrap
         configMap:
           name: jenkins-agent-bootstrap
+
   volumeClaimTemplates:
   - metadata:
       name: jenkins-agent-pv
