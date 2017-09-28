@@ -55,3 +55,6 @@ data:
         exit 1
       fi
     fi
+
+    adduser jenkins
+    chown jenkins /mnt/pv
